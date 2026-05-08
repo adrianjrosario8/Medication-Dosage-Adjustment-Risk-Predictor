@@ -65,7 +65,7 @@ The model is optimized for **high recall on high-risk cases** (0.87), accepting 
 | Total medications (polypharmacy) | Indicator of treatment complexity |
 | Medication burden (20+ meds) | Elevated interaction and adjustment risk |
 | A1C levels | Glycemic control and dosage stability |
-| Number of procedures during admission | Proxy for clinical severity |
+| Prior history of procedures during admission | Proxy for clinical severity |
 | Length of hospital stay | Indicator of condition severity |
 | Age | Physiological risk modifier |
 | Number of diagnoses | Comorbidity burden |
