@@ -1,42 +1,19 @@
 # Medication Dosage Adjustment Risk Predictor
 
-> A clinical decision support system that predicts high vs. low dosage adjustment risk from patient-level clinical data, combining XGBoost-based risk classification with human-readable clinical explanations.
+> A clinical ML system predicting dosage adjustment risk from patient-level EHR data - trained on 100K+ records, validated with three convergent methods, and deployed end-to-end on AWS via Docker.
 
-**[Live Demo](https://adrianjrosario8-medication-dosage-adjustment-risk-pr-app-rohyo4.streamlit.app/)** - Deployed and fully functional on Streamlit Cloud
-
----
-
-## Problem Statement
-
-Medication dosage adjustment decisions in hospital settings are complex, inconsistent, and difficult to scale. Clinicians must simultaneously assess polypharmacy burden, comorbidities, glycemic control, and admission severity, often without structured decision support. This creates risk of under-treatment, over-treatment, and delayed intervention in high-risk patients.
+[![Live App](https://img.shields.io/badge/Live%20App-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit)](https://adrianjrosario8-medication-dosage-adjustment-risk-pr-app-rohyo4.streamlit.app/)
+[![AWS](https://img.shields.io/badge/Deployed-AWS%20EC2-FF9900?style=for-the-badge&logo=amazonaws)](http://34.229.233.249:8501)
+[![Docker](https://img.shields.io/badge/Docker-Hub-2496ED?style=for-the-badge&logo=docker)](https://hub.docker.com/r/adrianjrosario8/dosage-risk-app)
+[![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python)](https://python.org)
 
 ---
 
-## Solution
+## The Problem This Solves
 
-A machine learning pipeline trained on real-world clinical EHR data that classifies patients as high or low dosage adjustment risk and generates structured clinical reasoning for each prediction.
+Most EHR-based ML research on this dataset targets readmission prediction or glucose forecasting. This project reframes the problem around **dosage adjustment risk** - a clinically underserved prediction target directly tied to medication safety, adverse drug event prevention, and earlier clinical intervention.
 
-```
-Patient Input → Feature Engineering → XGBoost Model → Risk Classification → Clinical Explanation
-```
-
-The system prioritizes **high recall on high-risk patients**, the clinically critical direction  ensuring that genuinely at-risk patients are flagged rather than missed.
-
----
-
-## Example Output
-
-```
-Risk Classification:    HIGH RISK 🚨
-Probability (High):     98.47%
-Probability (Low):       1.53%
-
-Clinical Decision Support:
-- Patient is on diabetes medication, increasing sensitivity to dosage changes
-- High medication burden (20+ medications) indicates increased treatment complexity
-- Elevated A1C indicates suboptimal glycemic control
-- Extended hospital stay may indicate higher severity of condition
-```
+Dosage adjustment decisions in hospital settings are complex, inconsistent, and difficult to scale. Clinicians simultaneously assess polypharmacy burden, comorbidities, glycemic control, and admission severity - often without structured decision support. This system provides that support.
 
 ---
 
@@ -44,60 +21,83 @@ Clinical Decision Support:
 
 | Metric | Value |
 |--------|-------|
-| AUC-ROC | 0.812 (+/- 0.0034) |
-| Accuracy | 0.722 |
+| AUC-ROC | 0.812 (SD: ±0.0034) |
+| High-Risk Recall (deployed, 8 features) | 0.87 |
+| High-Risk Recall (full model, 21 features) | 0.906 |
 | F1 Score | 0.75 |
-| High Risk Recall (full model, 21 features) | 0.906 |
-| High Risk Recall (deployed model, 8 features) | 0.87 |
-| High Risk Precision | 0.641 |
-| Low Risk Recall | 0.59 |
-| Low Risk Precision | 0.84 |
+| Accuracy | 0.722 |
 
-The model is optimized for **high recall on high-risk cases** (0.87), accepting lower precision to minimize missed detections which is the appropriate clinical trade-off for a safety-critical screening tool. Stable validation confirmed across cross-validation folds (AUC SD: 0.0035).
+**Why Recall is the headline metric:** In clinical ML, missing a high-risk patient is far more costly than a false positive. The model is explicitly optimised for recall on high-risk cases - the appropriate trade-off for a safety-critical screening tool.
+
+**Validation approach:** AUC 0.812 confirmed across three independent methods - Nested CV, Stratified K-Fold, and Repeated Stratified K-Fold - with near-identical standard deviations (AUC SD: 0.0035). Convergence across three methods is strong evidence of a stable, non-overfit model.
+
+**Feature reduction:** The deployed model uses 8 clinically interpretable features selected from a 21-feature full model, retaining 97% of full-model recall while maximising transparency and clinical usability.
 
 ---
 
-## Clinical Features Used
+## Example Output
 
-| Feature | Clinical Relevance |
+```
+Risk Classification:    HIGH RISK
+Probability (High):     98.47%
+Probability (Low):       1.53%
+
+Clinical Decision Support:
+- Patient is on diabetes medication, increasing sensitivity to dosage changes
+- High medication burden (20+ medications) indicates elevated treatment complexity
+- Elevated A1C indicates suboptimal glycemic control
+- Extended hospital stay may indicate higher condition severity
+```
+
+---
+
+## Clinical Features
+
+| Feature | Clinical Rationale |
 |---------|-------------------|
 | Diabetes medication usage | Increases sensitivity to dosage changes |
 | Total medications (polypharmacy) | Indicator of treatment complexity |
 | Medication burden (20+ meds) | Elevated interaction and adjustment risk |
 | A1C levels | Glycemic control and dosage stability |
-| Prior history of procedures during admission | Proxy for clinical severity |
-| Length of hospital stay | Indicator of condition severity |
+| Prior procedures during admission | Proxy for clinical severity |
+| Length of hospital stay | Condition severity indicator |
 | Age | Physiological risk modifier |
 | Number of diagnoses | Comorbidity burden |
 
 ---
 
-## Why This Project Stands Out
+## Deployment Architecture
 
-Most EHR-based ML projects focus on readmission prediction or glucose forecasting. This system targets a clinically underserved problem, **dosage adjustment risk** which directly affects medication safety decisions. Key differentiators:
+```
+User → AWS EC2 → Docker Container → Streamlit → XGBoost Model
+```
 
-- Trained on a dataset of 100,000+ patient records with rigorous cross-validation
-- Clinically grounded feature engineering reflecting actual hospital risk assessment logic
-- Explainable outputs designed for decision support, not black-box scoring
-- Recall-optimized model design aligned with clinical safety priorities
-- Stratified K-Fold, Repeated Stratified K-Fold, and Nested CV all converging around 0.812 AUC with near-identical standard deviations is strong evidence of a stable, non-overfit model.
-- The deployed model uses 8 clinically interpretable features selected from a 21-feature full model, retaining 97% of recall performance while maximising transparency and clinical usability.
-- Target variable selection was driven by domain research, dosage adjustment risk was identified as a clinically underserved problem in this dataset, previously used almost exclusively for readmission prediction.
+This project is deployed end-to-end across three environments:
 
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| Model | XGBoost, Scikit-learn |
-| Data Processing | Pandas |
-| Frontend & Deployment | Python, Streamlit, Streamlit Cloud |
-| Validation | Nested Cross-validation, Brier Score, AUC-ROC |
+| Environment | Link |
+|-------------|------|
+| Streamlit Cloud | [Live App](https://adrianjrosario8-medication-dosage-adjustment-risk-pr-app-rohyo4.streamlit.app/) |
+| AWS EC2 | [http://34.229.233.249:8501](http://34.229.233.249:8501) |
+| Docker Hub | [adrianjrosario8/dosage-risk-app](https://hub.docker.com/r/adrianjrosario8/dosage-risk-app) |
 
 ---
 
-## How to Run Locally
+## Run With Docker
+
+Pull and run the public image in one command - no setup required:
+
+```bash
+docker pull adrianjrosario8/dosage-risk-app
+docker run -p 8501:8501 adrianjrosario8/dosage-risk-app
+```
+
+Open `http://localhost:8501` in your browser.
+
+This is reproducible deployment in practice - the same image runs identically on any system, matching what is live on AWS.
+
+---
+
+## Run Locally
 
 ```bash
 git clone https://github.com/adrianjrosario8/Medication-Dosage-Adjustment-Risk-Predictor.git
@@ -108,13 +108,36 @@ streamlit run app.py
 
 ---
 
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Model | XGBoost, scikit-learn |
+| Data Processing | pandas, NumPy |
+| Validation | Nested CV, Stratified K-Fold, Repeated Stratified K-Fold, Brier Score |
+| Frontend | Streamlit |
+| Containerization | Docker, Docker Hub |
+| Cloud Deployment | AWS EC2 |
+
+---
+
+## What Differentiates This Project
+
+- **Novel target:** Dosage adjustment risk as a prediction target is underexplored - prior work on this dataset focused almost exclusively on readmission and glucose prediction. Target variable selection was driven by domain research into clinically underserved gaps.
+- **Rigorous validation:** Three-method convergence at AUC 0.812 with near-identical standard deviations rules out overfitting and confirms generalisability.
+- **Clinical reasoning layer:** Predictions are accompanied by structured clinical explanations grounded in actual hospital risk assessment logic - not black-box scores.
+- **Full MLOps pipeline:** Local development, Docker containerization, Docker Hub registry, and AWS EC2 deployment - a complete production deployment workflow.
+- **Recall-optimised design:** Model architecture reflects clinical priorities, not just benchmark metrics.
+
+---
+
 ## Future Improvements
 
-- SHAP-based feature importance visualization
-- Confidence intervals on risk probability outputs
-- Multi-condition and multi-drug risk modeling
-- REST API deployment for EHR system integration
-- Standardized clinical documentation export
+- FastAPI inference endpoint for REST API serving
+- MLflow experiment tracking and model registry for versioned model management
+- CI/CD deployment pipeline
+- Model monitoring and drift detection
+- Batch hospital workflow integration
 
 ---
 
@@ -126,6 +149,9 @@ This tool is intended for **clinical decision support only** and does not replac
 
 ## Author
 
-Built as part of a portfolio focused on **Healthcare AI**, **Clinical Data Science**, and **Pharmacovigilance ML**.
+**Adrian Jacob Rosario**
+MS Pharmaceutical Sciences - Pharmacometrics & Systems Pharmacology, University of Pittsburgh
 
-[GitHub Portfolio](https://github.com/adrianjrosario8) | [LinkedIn](www.linkedin.com/in/adrian-jacob-rosario-330a47235)
+Building end-to-end pharmacovigilance ML systems at the intersection of pharmaceutical research and production ML engineering.
+
+[GitHub Portfolio](https://github.com/adrianjrosario8) | [LinkedIn](https://www.linkedin.com/in/adrian-jacob-rosario-330a47235/) | [Docker Hub](https://hub.docker.com/r/adrianjrosario8/dosage-risk-app)
